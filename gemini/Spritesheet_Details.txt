@@ -1,0 +1,22 @@
+Full Details -
+
+Actual Character Size - Approximately 38x20 pixels.  The Canvas  is 80x120 due to some animations.
+2 colour versions + outline or no outline.
+Idle (10 frames)
+Run (10 frames)
+Turn Around (3 frames)
+Crouch, with transition (1 frame  + 1 transition frame from standing)
+Crouch walk (8 frames)
+Crouch Attack (4 frames)
+Slide, with transition (2 frames)
+Wall Hang (1 frames)
+Wall Climb (7 frames)
+Attack 1 (4 frames)
+Attack 2 (6 frames)
+Jump, with transition (3 frames+ 2 frame transition between fall)
+Fall, with transition (3 frames + 2 frame transition between jump)
+Hit (1 frames)
+Death (10  frames)
+Wall Slide (3 frames)
+Roll (12 frames)
+Dash (2 frames)

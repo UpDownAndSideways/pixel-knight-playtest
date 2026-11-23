@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="/pixel-knight-playtest/gemini/">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixel Knight — Sidescrolling Character Controller Demo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="stage-wrapper">
+      <canvas id="game-canvas" width="480" height="270"></canvas>
+
+      <!-- Top-Left Diegetic HUD -->
+      <div id="hud-left">
+        <div class="hud-card status-card">
+          <div class="hp-row" id="hp-hearts" aria-label="Health"></div>
+          <div class="meters-row">
+            <div class="meter-group">
+              <span class="meter-label">DASH</span>
+              <div class="meter-track"><div class="meter-fill dash-fill" id="dash-bar"></div></div>
+            </div>
+            <div class="meter-group">
+              <span class="meter-label">AIR</span>
+              <div class="pip" id="air-dash-pip" title="Air Dash Ready"></div>
+            </div>
+          </div>
+          <div class="state-row">
+            <span class="state-badge" id="state-badge">IDLE</span>
+            <span class="anim-badge" id="anim-badge">_Idle [1/10]</span>
+          </div>
+        </div>
+
+        <div class="hud-card combo-card hidden" id="combo-card">
+          <span class="combo-num" id="combo-num">0</span>
+          <span class="combo-label">HITS</span>
+        </div>
+      </div>
+
+      <!-- Top-Right Controls & Tool Bar -->
+      <div id="hud-right">
+        <button class="hud-btn" id="btn-controls" title="Toggle Controls (Tab)">
+          <span class="key-hint">Tab</span> Controls
+        </button>
+        <button class="hud-btn" id="btn-debug" title="Toggle Hitboxes & Sensors (B)">
+          <span class="key-hint">B</span> Debug
+        </button>
+        <button class="hud-btn" id="btn-slowmo" title="Toggle 0.3x Slow Motion (T)">
+          <span class="key-hint">T</span> Slow-Mo
+        </button>
+        <button class="hud-btn" id="btn-sound" title="Toggle Audio (M)">
+          <span class="key-hint">M</span> SFX: ON
+        </button>
+        <button class="hud-btn" id="btn-respawn" title="Respawn at Checkpoint (R)">
+          <span class="key-hint">R</span> Reset
+        </button>
+      </div>
+
+      <!-- Zone Banner -->
+      <div id="zone-banner" class="hidden">
+        <div class="zone-title" id="zone-title">COURTYARD PROVING GROUNDS</div>
+        <div class="zone-sub" id="zone-sub">Run · Jump · 2-Hit Combo</div>
+      </div>
+
+      <!-- Bottom Action Bar (compact visual move guide) -->
+      <div id="quick-bar">
+        <span><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> Move</span>
+        <span><kbd>Space</kbd>/<kbd>W</kbd> Jump</span>
+        <span><kbd>S</kbd>/<kbd>↓</kbd> Crouch</span>
+        <span><kbd>J</kbd>/<kbd>Z</kbd>/Click Attack</span>
+        <span><kbd>K</kbd>/<kbd>X</kbd> Roll / Slide</span>
+        <span><kbd>L</kbd>/<kbd>Shift</kbd> Dash</span>
+        <span><kbd>H</kbd> Hit</span>
+        <span><kbd>V</kbd> Death</span>
+      </div>
+
+      <!-- Full Controls & Animation Showcase Drawer -->
+      <div id="controls-modal" class="hidden">
+        <div class="modal-inner">
+          <div class="modal-header">
+            <h2>PIXEL KNIGHT — CONTROLLER REFERENCE</h2>
+            <button id="btn-close-modal" aria-label="Close">✕</button>
+          </div>
+          <div class="modal-grid">
+            <div class="modal-col">
+              <h3>Movement &amp; Acrobatics</h3>
+              <ul>
+                <li><span class="keys"><kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd></span><span class="desc"><b>Run &amp; Turnaround Skid</b></span></li>
+                <li><span class="keys"><kbd>W</kbd> / <kbd>↑</kbd> / <kbd>Space</kbd></span><span class="desc"><b>Jump</b> (hold for height, coyote &amp; buffer)</span></li>
+                <li><span class="keys"><kbd>S</kbd> / <kbd>↓</kbd></span><span class="desc"><b>Crouch &amp; Crouch Walk</b> (crawl under tunnels)</span></li>
+                <li><span class="keys"><kbd>S</kbd>/<kbd>↓</kbd> + <kbd>K</kbd>/<kbd>X</kbd> or <kbd>C</kbd></span><span class="desc"><b>Power Slide</b> (slides under low vaults)</span></li>
+                <li><span class="keys"><kbd>K</kbd> / <kbd>X</kbd></span><span class="desc"><b>Dodge Roll</b> (12f roll with i-frames)</span></li>
+                <li><span class="keys"><kbd>L</kbd> / <kbd>Shift</kbd> / <kbd>E</kbd></span><span class="desc"><b>Shadow Dash</b> (ground &amp; 1× air dash)</span></li>
+              </ul>
+            </div>
+            <div class="modal-col">
+              <h3>Walls, Ledges &amp; Combat</h3>
+              <ul>
+                <li><span class="keys">Air + into Wall → <kbd>Space</kbd></span><span class="desc"><b>Wall Slide</b> &amp; <b>Wall Jump</b></span></li>
+                <li><span class="keys">Jump to Edge → <kbd>W</kbd>/<kbd>Space</kbd></span><span class="desc"><b>Wall Hang</b> &amp; <b>Ledge Climb</b></span></li>
+                <li><span class="keys"><kbd>J</kbd> / <kbd>Z</kbd> / Left Click</span><span class="desc"><b>2-Hit Sword Combo</b> (press twice)</span></li>
+                <li><span class="keys"><kbd>S</kbd>/<kbd>↓</kbd> + <kbd>J</kbd>/<kbd>Z</kbd></span><span class="desc"><b>Crouch Sweep Attack</b></span></li>
+                <li><span class="keys"><kbd>H</kbd> / <kbd>V</kbd></span><span class="desc"><b>Test Hitstun / Death Animation</b></span></li>
+                <li><span class="keys"><kbd>B</kbd> / <kbd>T</kbd> / <kbd>R</kbd></span><span class="desc"><b>Debug Hitboxes / Slow-Mo / Respawn</b></span></li>
+              </ul>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span>Gamepad supported (D-Pad/Stick, A=Jump, X=Attack, B=Roll/Slide, RB/RT=Dash)</span>
+            <button class="primary-btn" id="btn-resume">Resume Demo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="loading-overlay">
+        <div class="loader-box">
+          <div class="loader-title">PIXEL KNIGHT</div>
+          <div class="loader-sub" id="loading-text">Loading 22 spritesheets…</div>
+          <div class="loader-bar"><div class="loader-fill" id="loading-fill"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

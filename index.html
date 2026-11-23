@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pixel Knight playtest — Cursor vs Gemini</title>
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #0b0a10; color: #f4efe4; font-family: Georgia, "Times New Roman", serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 20px 80px; }
+    h1 { font-size: 2rem; letter-spacing: 0.04em; margin: 0 0 12px; }
+    p { line-height: 1.5; color: #d8d0c4; }
+    .row { display: flex; flex-wrap: wrap; gap: 16px; margin: 28px 0 16px; }
+    a.play { display: inline-block; padding: 14px 22px; background: #e6b15a; color: #1a140c; text-decoration: none; font-weight: 700; border-radius: 8px; }
+    a.play:hover { filter: brightness(1.06); }
+    .quiet { font-size: 0.95rem; color: #b7ae9f; }
+    .card { border: 1px solid #3a3344; border-radius: 12px; padding: 16px 18px; flex: 1 1 240px; background: #14101c; }
+    .card h2 { margin: 0 0 8px; font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Pixel Knight playtest</h1>
+    <p>Two AI builds of the same knight sprite pack and the same brief. Try both, then note which controller felt better to you.</p>
+    <div class="row">
+      <div class="card">
+        <h2>Cursor build</h2>
+        <p>A longer obstacle course in a single HTML file, with slimes and a course-clear goal.</p>
+        <a class="play" href="./cursor/">Play the Cursor build</a>
+      </div>
+      <div class="card">
+        <h2>Gemini build</h2>
+        <p>A decorated training ground with audio, dummies, debug tools, and a fuller HUD.</p>
+        <a class="play" href="./gemini/">Play the Gemini build</a>
+      </div>
+    </div>
+    <p class="quiet">Feedback welcome: which build felt better to control, and did anything break? You can open an issue on this repository or tell Jonathan directly.</p>
+  </main>
+</body>
+</html>
