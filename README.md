@@ -2,7 +2,10 @@
 
 Public playtest builds of two AI-made Pixel Knight sidescrollers, generated from the same sprite pack.
 
-- [Play the Cursor build](https://updownandsideways.github.io/pixel-knight-playtest/cursor/)
-- [Play the Gemini build](https://updownandsideways.github.io/pixel-knight-playtest/gemini/)
+- [Play the Cursor build](https://pixel-knight-playtest.noble-texture.workers.dev/cursor/)
+- [Play the Gemini build](https://pixel-knight-playtest.noble-texture.workers.dev/gemini/)
+- [Landing page](https://pixel-knight-playtest.noble-texture.workers.dev/)
 
-These are static demos for comparison, not a finished game.
+The source in this repository is the static site. Playable hosting is on Cloudflare Workers.
+
+These are demos for comparison, not a finished game.
