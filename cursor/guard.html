@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Knight — Guard</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #07060c; color: #f4efe4; font-family: Georgia, "Times New Roman", serif; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px 12px 40px; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; background: #140c22; max-width: 100%; height: auto; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  button {
+    background: #1a1424; color: #f4efe4; border: 1px solid #3a3344;
+    padding: 8px 12px; font: inherit; cursor: pointer;
+  }
+  button.on { background: #e6b15a; color: #1a140c; border-color: #e6b15a; }
+  p { margin: 0; color: #b7ae9f; font-size: 0.95rem; text-align: center; }
+  a { color: #e6b15a; }
+</style>
+</head>
+<body>
+<canvas id="view" width="480" height="240"></canvas>
+<div class="row">
+  <button id="all" class="on" type="button">Full</button>
+  <button id="raise" type="button">Raise</button>
+  <button id="hold" type="button">Hold</button>
+  <button id="parry" type="button">Parry</button>
+  <button id="step" type="button">Step</button>
+</div>
+<p id="cap">raise — sheet frame 1 / 8</p>
+<p>Arrow keys step a frame. Space plays and pauses.<br>
+<a href="./">Back to the course</a> — hold F to guard, tap F as a hit lands to parry.</p>
+<script>
+const FW = 120, FH = 80, ANCHOR_X = 54, ANCHOR_Y = 80;
+const CLIPS = {
+  all:   { start: 0, frames: 8, fps: 10 },
+  raise: { start: 0, frames: 2, fps: 12 },
+  hold:  { start: 2, frames: 3, fps: 7 },
+  parry: { start: 5, frames: 3, fps: 16 },
+};
+const NAMES = ["raise", "raise", "guard", "guard", "guard", "parry", "recover", "guard"];
+
+const canvas = document.getElementById("view");
+const ctx = canvas.getContext("2d");
+const cap = document.getElementById("cap");
+const sheet = new Image();
+sheet.src = "120x80_PNGSheets/_Guard.png";
+const idle = new Image();
+idle.src = "120x80_PNGSheets/_Idle.png";
+
+let mode = "all";
+let frame = 0;
+let acc = 0;
+let last = 0;
+let playing = true;
+
+function paintButtons() {
+  for (const id of ["all", "raise", "hold", "parry", "step"]) {
+    document.getElementById(id).classList.toggle("on", id === mode);
+  }
+}
+function setMode(name) {
+  mode = name;
+  frame = 0;
+  acc = 0;
+  playing = name !== "step";
+  paintButtons();
+}
+for (const id of ["all", "raise", "hold", "parry"]) {
+  document.getElementById(id).onclick = () => setMode(id);
+}
+document.getElementById("step").onclick = () => {
+  mode = "step";
+  playing = false;
+  frame = (frame + 1) % 8;
+  paintButtons();
+};
+
+addEventListener("keydown", (e) => {
+  if (e.code === "ArrowRight" || e.code === "ArrowLeft") {
+    mode = "step";
+    playing = false;
+    frame = (frame + (e.code === "ArrowRight" ? 1 : 7)) % 8;
+    paintButtons();
+  } else if (e.code === "Space") {
+    e.preventDefault();
+    if (mode === "step") setMode("all");
+    else playing = !playing;
+  }
+});
+
+function drawKnight(img, index, x, y, scale) {
+  if (!img.complete || !img.naturalWidth) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, index * FW, 0, FW, FH, -ANCHOR_X * scale, -ANCHOR_Y * scale, FW * scale, FH * scale);
+  ctx.restore();
+}
+
+function loop(now) {
+  if (!last) last = now;
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  if (playing && mode !== "step") {
+    const spec = CLIPS[mode];
+    acc += dt;
+    const step = 1 / spec.fps;
+    while (acc >= step) {
+      acc -= step;
+      frame = (frame + 1) % spec.frames;
+    }
+  }
+  const shown = mode === "step" ? frame : CLIPS[mode].start + frame;
+
+  ctx.imageSmoothingEnabled = false;
+  const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  g.addColorStop(0, "#120a1e");
+  g.addColorStop(1, "#3a2848");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#2f5a38";
+  ctx.fillRect(0, 188, canvas.width, 2);
+  ctx.fillStyle = "#241e2e";
+  ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
+
+  drawKnight(idle, Math.floor(now / 120) % 10, 130, 188, 2);
+  drawKnight(sheet, shown, 330, 188, 2);
+  ctx.fillStyle = "#6a6078";
+  ctx.font = "14px Georgia, serif";
+  ctx.fillText("idle", 108, 36);
+  ctx.fillStyle = "#f4efe4";
+  ctx.fillText(NAMES[shown], 300, 36);
+  cap.textContent = NAMES[shown] + " — sheet frame " + (shown + 1) + " / 8";
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

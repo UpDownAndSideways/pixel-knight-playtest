@@ -60,6 +60,10 @@ const ANIMS = {
   roll:          { src: "_Roll.png", frames: 12, fps: 20, loop: false },
   hit:           { src: "_Hit.png", frames: 1, fps: 1, loop: false },
   death:         { src: "_Death.png", frames: 10, fps: 11, loop: false },
+  // _Guard.png is 8 frames: raise, raise, hold, hold, hold, parry, recover, settle.
+  guardIn:       { src: "_Guard.png", start: 0, frames: 2, fps: 12, loop: false },
+  guard:         { src: "_Guard.png", start: 2, frames: 3, fps: 7, loop: true },
+  parry:         { src: "_Guard.png", start: 5, frames: 3, fps: 16, loop: false },
 };
 
 // Cancels the climb sheet's in-frame travel so the body stays on the collision box.
@@ -87,6 +91,9 @@ const STATE_ANIM = {
   crouchAttack: "crouchAttack",
   hit: "hit",
   death: "death",
+  guardIn: "guardIn",
+  guard: "guard",
+  parry: "parry",
 };
 
 const FONT = {
@@ -193,6 +200,10 @@ const player = {
   spawnY: FLOOR,
   deadT: 0,
   landVy: 0,
+  guardT: 0,
+  blockCd: 0,
+  parryHit: 0,
+  parryHitT: 0,
 };
 
 function rand(n) {
@@ -426,7 +437,7 @@ function rememberGhost() {
 function tryAttack() {
   if (!player.attackQueued) return;
   const st = player.state;
-  if (st === "hit" || st === "death" || st === "roll" || st === "dash") return;
+  if (st === "hit" || st === "death" || st === "roll" || st === "dash" || st === "parry") return;
   if (st === "attack" || st === "attack2" || st === "crouchAttack") return;
   const crouching = st === "crouch" || st === "crouchWalk" || st === "slide" ||
     (player.onGround && held("ArrowDown", "KeyS"));
@@ -485,6 +496,20 @@ function tryRoll(ix) {
   player.iframes = Math.max(player.iframes, 0.42);
   setState("roll");
   dust(player.x, player.y, 5, "#b7a48c", 30);
+}
+
+function tryGuard(ix) {
+  if (!held("KeyF")) return;
+  const st = player.state;
+  if (st === "guard" || st === "guardIn" || st === "parry") return;
+  if (!player.onGround) return;
+  if (st === "hit" || st === "death" || st === "roll" || st === "dash" ||
+      st === "attack" || st === "attack2" || st === "crouchAttack" || st === "slide") return;
+  if (standBlocked()) return;
+  if (ix) player.facing = ix;
+  player.guardT = 0;
+  player.vx *= 0.35;
+  setState("guardIn");
 }
 
 function tryJump(ix) {
@@ -547,6 +572,16 @@ function applyMotion(dt, ix, iy) {
     player.rollT -= dt;
     player.vx = player.rollDir * 150;
     player.vy = 0;
+    return;
+  }
+
+  if (st === "guard" || st === "guardIn" || st === "parry") {
+    const target = st === "guard" ? ix * 22 : 0;
+    const f = 900 * dt;
+    if (player.vx < target) player.vx = Math.min(target, player.vx + f);
+    else player.vx = Math.max(target, player.vx - f);
+    if (player.onGround) player.vy = 0;
+    else player.vy = Math.min(MAX_FALL, player.vy + GRAVITY * dt);
     return;
   }
 
@@ -712,8 +747,27 @@ function attackHitbox() {
   return { x, y, w: reach, h };
 }
 
-function hurt(fromX) {
+function guardingFront(fromX) {
+  const st = player.state;
+  if (st !== "guard" && st !== "guardIn" && st !== "parry") return false;
+  return (fromX - player.x) * player.facing > -8;
+}
+
+function hurt(fromX, canBlock) {
   if (player.iframes > 0 || player.state === "death" || player.state === "hit") return;
+  if (canBlock && guardingFront(fromX)) {
+    if (player.blockCd <= 0) {
+      const perfect = player.guardT < 0.2;
+      player.blockCd = 0.42;
+      player.parryHit = perfect ? 2 : 1;
+      player.parryHitT = 0.16;
+      player.vx = -player.facing * (perfect ? 36 : 78);
+      shake = Math.max(shake, perfect ? 2.4 : 1.2);
+      burst(player.x + player.facing * 16, player.y - 28, perfect ? "#fff1c9" : "#e6b15a", perfect ? 8 : 5);
+      setState("parry");
+    }
+    return;
+  }
   player.hp -= 1;
   shake = Math.max(shake, 3.5);
   burst(player.x, player.y - 16, "#e25b5b", 8);
@@ -764,7 +818,7 @@ function updateHazards(dt) {
   for (let i = 0; i < spikes.length; i++) {
     const s = spikes[i];
     const hb = { x: s.x + 1, y: s.y - 7, w: 6, h: 7 };
-    if (overlap(body, hb)) hurt(s.x + 4);
+    if (overlap(body, hb)) hurt(s.x + 4, false);
   }
 
   for (let i = 0; i < slimes.length; i++) {
@@ -795,8 +849,24 @@ function updateHazards(dt) {
         s.hurt = 0;
         burst(s.x, s.y - 6, "#3e6a45", 12);
       }
+    } else if (player.parryHit && overlap(body, hb)) {
+      const perfect = player.parryHit === 2;
+      player.parryHit = 0;
+      s.dir = -player.facing;
+      s.x -= player.facing * 14;
+      s.hurt = 0.22;
+      burst(s.x, s.y - 8, perfect ? "#fff1c9" : "#e6b15a", perfect ? 8 : 4);
+      if (perfect) {
+        s.hp -= 1;
+        shake = Math.max(shake, 1.6);
+        if (s.hp <= 0) {
+          s.alive = false;
+          s.hurt = 0;
+          burst(s.x, s.y - 6, "#3e6a45", 12);
+        }
+      }
     } else if (overlap(body, hb)) {
-      hurt(s.x);
+      hurt(s.x, true);
     }
   }
 
@@ -901,6 +971,24 @@ function updateState(dt, wasGround, ix, iy) {
   if (st === "hit") {
     player.hitT -= dt;
     if (player.hitT <= 0) setState(player.onGround ? "idle" : "fall");
+    return;
+  }
+
+  if (st === "guardIn" || st === "guard" || st === "parry") {
+    if (ix) player.facing = ix;
+    if (!player.onGround) {
+      setState(player.vy > 40 ? "fall" : "apex");
+      return;
+    }
+    if (st === "parry") {
+      if (player.animDone) setState(held("KeyF") ? "guard" : (ix ? "run" : "idle"));
+      return;
+    }
+    if (!held("KeyF")) {
+      setState(ix ? "run" : "idle");
+      return;
+    }
+    if (st === "guardIn" && player.animDone) setState("guard");
     return;
   }
 
@@ -1077,6 +1165,12 @@ function update(dt) {
   if (edge("KeyJ", "KeyZ")) player.attackQueued = true;
   player.dashCd = Math.max(0, player.dashCd - dt);
   player.iframes = Math.max(0, player.iframes - dt);
+  player.blockCd = Math.max(0, player.blockCd - dt);
+  player.parryHitT = Math.max(0, player.parryHitT - dt);
+  if (player.parryHitT <= 0) player.parryHit = 0;
+  if (player.state === "guard" || player.state === "guardIn" || player.state === "parry") {
+    player.guardT += dt;
+  }
   player.landVy = player.vy;
 
   if (player.state !== "death") {
@@ -1084,6 +1178,7 @@ function update(dt) {
     tryRoll(ix);
     tryAttack();
     tryJump(ix);
+    tryGuard(ix);
     applyMotion(dt, ix, iy);
   } else {
     player.vx *= Math.max(0, 1 - 8 * dt);
@@ -1140,7 +1235,7 @@ function drawText(str, x, y, color, scale) {
 function drawSprite(anim, frame, x, y, facing, alpha) {
   const a = ANIMS[anim];
   if (!a || !a.img) return;
-  const sx = (frame % a.frames) * FRAME_W;
+  const sx = ((a.start || 0) + (frame % a.frames)) * FRAME_W;
   let ox = 0;
   let oy = 0;
   if (anim === "wallClimb") {
@@ -1421,7 +1516,7 @@ function drawHud() {
     slide: "SLIDE", jump: "JUMP", apex: "APEX", fall: "FALL", wallslide: "WALL SLIDE",
     wallhang: "WALL HANG", wallclimb: "WALL CLIMB", dash: "DASH", roll: "ROLL",
     attack: "ATTACK", attack2: "ATTACK II", crouchAttack: "LOW ATTACK",
-    hit: "HIT", death: "DEATH",
+    hit: "HIT", death: "DEATH", guardIn: "GUARD", guard: "GUARD", parry: "PARRY",
   })[player.state] || player.state;
   drawText(label, 8, 20, "#f4efe4", 1);
 
@@ -1432,7 +1527,7 @@ function drawHud() {
   }
 
   if (help) {
-    const line = "A D MOVE   W JUMP   S CROUCH   SHIFT DASH   J ATK   L ROLL   H HIDE";
+    const line = "A D MOVE   W JUMP   S CROUCH   SHIFT DASH   J ATK   L ROLL   F GUARD   H HIDE";
     ctx.fillStyle = "rgba(8,6,12,0.55)";
     ctx.fillRect(0, VIEW_H - 12, VIEW_W, 12);
     drawText(line, 6, VIEW_H - 9, "#f4efe4", 1);
